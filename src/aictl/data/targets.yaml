@@ -1,0 +1,53 @@
+# Instrucciones de copia por AI.
+#
+# Para personalizarlo: `aictl mapping --export` lo copia a ~/.config/aictl/targets.yaml,
+# que tiene prioridad sobre este archivo.
+#
+# root:       carpeta global de configuración de la AI.
+# kind:       agent (un .md del vault) | skill (una carpeta con SKILL.md).
+# dest:       ruta relativa a root. {name} = nombre del agent/skill.
+#             Si termina en "/" se copia la carpeta completa de la skill.
+# transform:  lista de transformaciones (se aplican a los .md, en orden):
+#             strip_wikilinks, strip_frontmatter, opencode_frontmatter,
+#             kiro_steering, to_kiro_json, to_mdc, concat
+#             (concat agrupa todos los items en un único archivo).
+#
+# Siempre se eliminan del frontmatter las claves internas de aictl
+# (aictl, targets y los overrides por AI como `opencode: {...}`).
+version: 1
+targets:
+  claude:
+    root: ~/.claude
+    rules:
+      - { kind: agent, dest: "agents/{name}.md", transform: [strip_wikilinks] }
+      - { kind: skill, dest: "skills/{name}/",   transform: [strip_wikilinks] }
+
+  opencode:
+    root: ~/.config/opencode
+    rules:
+      - { kind: agent, dest: "agents/{name}.md", transform: [strip_wikilinks, opencode_frontmatter] }
+      - { kind: skill, dest: "skills/{name}/",   transform: [strip_wikilinks] }
+
+  codex:
+    root: ~/.codex
+    rules:
+      - { kind: agent, dest: "AGENTS.md",        transform: [strip_wikilinks, concat] }
+      - { kind: skill, dest: "skills/{name}/",   transform: [strip_wikilinks] }
+
+  antigravity:
+    root: ~/.gemini
+    rules:
+      - { kind: agent, dest: "GEMINI.md",                  transform: [strip_wikilinks, concat] }
+      - { kind: skill, dest: "antigravity/skills/{name}/", transform: [strip_wikilinks] }
+
+  kiro:
+    root: ~/.kiro
+    rules:
+      - { kind: agent, dest: "agents/{name}.json", transform: [strip_wikilinks, to_kiro_json] }
+      - { kind: skill, dest: "skills/{name}/",     transform: [strip_wikilinks] }
+
+  cursor:
+    root: ~/.cursor
+    rules:
+      - { kind: agent, dest: "agents/{name}.md", transform: [strip_wikilinks] }
+      - { kind: skill, dest: "skills/{name}/",   transform: [strip_wikilinks] }

@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aictl"
+version = "0.1.0"
+description = "Sincroniza agents y skills desde Obsidian hacia Claude, OpenCode, Codex, Antigravity, Kiro y Cursor"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.12",
+    "questionary>=2.0",
+    "pyyaml>=6.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5"]
+
+[project.scripts]
+aictl = "aictl.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aictl"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
