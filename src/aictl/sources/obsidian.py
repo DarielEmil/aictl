@@ -8,6 +8,10 @@ from aictl.frontmatter import parse
 from aictl.sources.base import Item, Source
 
 IGNORED_DIRS = {".obsidian", ".trash", ".git"}
+PERMISSION_HINT = (
+    "En macOS, las carpetas de Google Drive/iCloud requieren dar acceso a tu terminal en "
+    "Ajustes del Sistema → Privacidad y seguridad → Archivos y carpetas (o Acceso total al disco)."
+)
 
 
 class SourceError(Exception):
@@ -36,7 +40,12 @@ class ObsidianSource(Source):
         problems = self.validate()
         if problems:
             raise SourceError("; ".join(problems))
-        items = self._agents() + self._skills()
+        try:
+            items = self._agents() + self._skills()
+        except PermissionError as exc:
+            raise SourceError(f"Sin permiso para leer {exc.filename}. {PERMISSION_HINT}") from exc
+        except OSError as exc:
+            raise SourceError(f"No se pudo leer {exc.filename}: {exc.strerror}") from exc
         seen: dict[tuple[str, str], Path] = {}
         for item in items:
             key = (item.kind, item.name)
@@ -101,7 +110,11 @@ def list_subdirs(root: Path) -> list[str]:
     if not root.is_dir():
         return []
     result = []
-    for path in sorted(root.rglob("*")):
+    try:
+        paths = sorted(root.rglob("*"))
+    except OSError:
+        return []
+    for path in paths:
         rel = path.relative_to(root)
         if not path.is_dir() or any(p.startswith(".") or p in IGNORED_DIRS for p in rel.parts):
             continue

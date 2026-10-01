@@ -20,7 +20,7 @@ aictl sync      # copia agents/skills del vault a cada AI seleccionada
 aictl update    # cambia TU CONFIGURACIÓN: ruta del vault, carpetas, AIs
 aictl upgrade   # actualiza la herramienta aictl (git pull + reinstalar)
 aictl status    # configuración actual y último sync
-aictl doctor    # verifica vault, mapeo y permisos
+aictl doctor    # comprueba que el vault se puede leer y las AIs se pueden escribir
 aictl mapping   # muestra el YAML de mapeo en uso (--export para personalizarlo)
 ```
 
@@ -100,6 +100,18 @@ Transforms disponibles: `strip_wikilinks`, `strip_frontmatter`, `opencode_frontm
 
 > Las rutas globales de cada herramienta cambian con sus versiones; si alguna no coincide con
 > la tuya, ajústala en tu `targets.yaml`.
+
+## Comprobaciones de acceso
+
+`init`, `update` (al cambiar el vault o añadir AIs) y `doctor` comprueban antes de guardar:
+
+- Que el vault y las carpetas de agents/skills existen y **se pueden listar** (detecta el bloqueo de
+  macOS en Google Drive/iCloud y explica cómo dar permiso a la terminal).
+- Que se pueden **leer todos los archivos** de cada agent/skill.
+- Avisa de carpetas vacías (Drive sin sincronizar), agents sin `.md` y skills sin `SKILL.md`.
+- Que se puede **escribir** en la carpeta de cada AI (prueba real con un archivo temporal).
+
+Si hay errores, `init`/`update` piden confirmación antes de guardar (sin terminal interactiva, fallan).
 
 ## Seguridad de los archivos
 

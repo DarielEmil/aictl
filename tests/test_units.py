@@ -90,3 +90,36 @@ def test_default_mapping_is_valid():
 def test_mapping_validation(rule, message):
     with pytest.raises(MappingError, match=message):
         mapping.parse(f"targets:\n  x:\n    root: /tmp\n    rules:\n      - {rule}\n")
+
+
+def test_permission_error_becomes_clear_source_error(vault, monkeypatch):
+    from pathlib import Path
+
+    def deny(self):
+        raise PermissionError(1, "Operation not permitted", str(self))
+
+    monkeypatch.setattr(Path, "iterdir", deny)
+    with pytest.raises(SourceError, match="Sin permiso para leer"):
+        _source(vault).items()
+
+
+def test_readable_dir_reports_permission_problem(tmp_path, monkeypatch):
+    import os
+
+    from aictl.checks import readable_dir
+
+    def deny(path):
+        raise PermissionError(1, "Operation not permitted", str(path))
+
+    assert readable_dir(tmp_path) is None
+    monkeypatch.setattr(os, "scandir", deny)
+    assert "Privacidad y seguridad" in readable_dir(tmp_path)
+
+
+def test_check_targets_detects_file_instead_of_folder(tmp_path):
+    from aictl.checks import check_targets
+
+    (tmp_path / "claude").write_text("no soy carpeta")
+    maps = mapping.parse(f"targets:\n  claude:\n    root: {tmp_path / 'claude'}\n    rules: []\n")
+    report = check_targets(maps, ["claude"])
+    assert report.has_errors and "no es una carpeta" in report.checks[0].message

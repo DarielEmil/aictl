@@ -8,6 +8,7 @@ import questionary
 import typer
 
 from aictl import ALL_TARGETS
+from aictl.checks import readable_dir
 from aictl.sources.obsidian import list_subdirs
 
 
@@ -20,10 +21,8 @@ def _ask(question: questionary.Question):
 
 def vault(default: str = "") -> str:
     def validate(value: str) -> bool | str:
-        path = Path(value).expanduser()
-        if not path.is_dir():
-            return "La carpeta no existe"
-        return True
+        problem = readable_dir(Path(value).expanduser())
+        return f"No se puede usar: {problem}" if problem else True
 
     answer = _ask(
         questionary.path(
@@ -49,7 +48,8 @@ def folder(vault_path: str, label: str, default: str) -> str:
     def validate(value: str) -> bool | str:
         if not value.strip():
             return "Indica una carpeta"
-        return True if (root / value).is_dir() else f"No existe {root / value}"
+        problem = readable_dir(root / value)
+        return f"No se puede usar: {problem}" if problem else True
 
     return _ask(
         questionary.autocomplete(

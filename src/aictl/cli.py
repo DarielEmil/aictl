@@ -11,7 +11,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from aictl import ALL_TARGETS, __version__, config, manifest, mapping, prompts
+from aictl import ALL_TARGETS, __version__, checks, config, manifest, mapping, prompts
 from aictl import sync as syncer
 from aictl import upgrade as upgrader
 from aictl.config import (
@@ -125,6 +125,26 @@ def _print_actions(actions: list[syncer.Action], dry_run: bool, verbose: bool) -
         )
 
 
+CHECK_ICON = {"ok": "[green]✓[/green]", "warn": "[yellow]![/yellow]", "error": "[red]✗[/red]"}
+
+
+def _print_report(report: checks.Report) -> None:
+    for c in report.checks:
+        console.print(f"  {CHECK_ICON[c.level]} {c.message}")
+
+
+def _verify_before_save(report: checks.Report, interactive: bool) -> None:
+    """Muestra las comprobaciones y, si hay errores, pide confirmación (o falla sin TTY)."""
+    console.print("[bold]Comprobando acceso…[/bold]")
+    _print_report(report)
+    if not report.has_errors:
+        return
+    if not interactive:
+        _fail("Hay errores de acceso; corrígelos antes de guardar la configuración.")
+    if not prompts.confirm("Hay errores de acceso. ¿Guardar la configuración de todos modos?", default=False):
+        raise typer.Abort()
+
+
 def _run_sync(
     cfg: Config,
     only: list[str] | None = None,
@@ -143,6 +163,8 @@ def _run_sync(
         outputs = syncer.build_outputs(items, maps, targets)
     except (SourceError, MappingError, syncer.SyncError) as exc:
         _fail(str(exc))
+    except OSError as exc:
+        _fail(f"No se pudo leer {exc.filename}: {exc.strerror}")
 
     agents = sum(1 for i in items if i.kind == "agent")
     console.print(f"Leídos [bold]{agents}[/bold] agents y [bold]{len(items) - agents}[/bold] skills")
@@ -219,16 +241,18 @@ def init(
         source=SourceConfig(vault_path=vault, agents_dir=agents_dir, skills_dir=skills_dir),
         targets=selected,
     )
-    problems = build_source(cfg).validate()
-    for p in problems:
-        err.print(f"[yellow]Aviso:[/yellow] {p}")
-
     _print_summary(cfg, maps)
+    report = checks.check_source(cfg).extend(checks.check_targets(maps, cfg.targets))
+    _verify_before_save(report, interactive)
     path = config.save(cfg)
     console.print(f"[green]Configuración guardada en {path}[/green]")
 
     if sync is None:
-        sync = interactive and not problems and prompts.confirm("¿Ejecutar `aictl sync` ahora?")
+        sync = (
+            interactive
+            and not report.has_errors
+            and prompts.confirm("¿Ejecutar `aictl sync` ahora?")
+        )
     if sync:
         _run_sync(cfg)
 
@@ -279,7 +303,14 @@ def update(
         return
 
     _print_diff(old, cfg)
-    if not by_flags and not prompts.confirm("¿Guardar los cambios?"):
+    added = [t for t in cfg.targets if t not in old.targets]
+    report = checks.Report()
+    if old.source != cfg.source:
+        report.extend(checks.check_source(cfg))
+    report.extend(checks.check_targets(maps, added))
+    if report.checks:
+        _verify_before_save(report, interactive=not by_flags)
+    if not by_flags and not report.has_errors and not prompts.confirm("¿Guardar los cambios?"):
         raise typer.Abort()
     config.save(cfg)
     console.print(f"[green]Configuración guardada en {config.config_path()}[/green]")
@@ -297,7 +328,6 @@ def update(
         if do_clean:
             _remove_target_files(name, maps)
 
-    added = [t for t in cfg.targets if t not in old.targets]
     if added or old.source != cfg.source:
         console.print("Ejecuta [bold]aictl sync[/bold] para aplicar los cambios.")
 
@@ -398,32 +428,20 @@ def doctor() -> None:
     if not config.exists():
         raise typer.Exit(1)
     cfg = _load_config()
-    src = cfg.source
-    check(src.vault.is_dir(), f"vault: {src.vault}", f"no existe el vault {src.vault}")
-    check(src.agents_path.is_dir(), f"agents: {src.agents_path}", f"no existe {src.agents_path}")
-    check(src.skills_path.is_dir(), f"skills: {src.skills_path}", f"no existe {src.skills_path}")
     try:
         maps = mapping.load(cfg)
         check(True, f"mapeo válido ({maps.source})", "")
     except MappingError as exc:
         check(False, "", str(exc))
         raise typer.Exit(1)
-    for name in cfg.targets:
-        if name not in maps.targets:
-            check(False, "", f"{name}: no está en el mapeo")
-            continue
-        root = maps.targets[name].root
-        parent = root if root.exists() else root.parent
-        check(
-            os.access(parent, os.W_OK),
-            f"{name}: {root} escribible",
-            f"{name}: sin permisos de escritura en {parent}",
-        )
-    try:
-        items = build_source(cfg).items()
-        check(True, f"{len(items)} items encontrados en el vault", "")
-    except SourceError as exc:
-        check(False, "", str(exc))
+
+    console.print("[bold]Lectura del vault[/bold]")
+    source_report = checks.check_source(cfg)
+    _print_report(source_report)
+    console.print("[bold]Escritura en las AIs[/bold]")
+    targets_report = checks.check_targets(maps, cfg.targets)
+    _print_report(targets_report)
+    ok = ok and not source_report.has_errors and not targets_report.has_errors
     raise typer.Exit(0 if ok else 1)
 
 

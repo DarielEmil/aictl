@@ -1,4 +1,5 @@
 import json
+import shutil
 
 from typer.testing import CliRunner
 
@@ -85,8 +86,6 @@ def test_source_change_updates_and_orphans_are_removed(cfg, home, vault):
     run("sync")
     (vault / "AI-Config/agents/code-reviewer/code-reviewer.md").write_text("---\ndescription: nuevo\n---\nNuevo\n")
     (vault / "AI-Config/agents/claude-only/claude-only.md").unlink()
-    import shutil
-
     shutil.rmtree(vault / "AI-Config/skills/pdf-tools")
 
     result = run("sync")
@@ -136,11 +135,44 @@ def test_update_remove_target_keeps_files_by_default(cfg, home):
     assert (home / ".cursor/agents/code-reviewer.md").exists()
 
 
-def test_update_vault_path(cfg, home, tmp_path):
+def test_update_vault_path(cfg, home, vault, tmp_path):
     other = tmp_path / "otro"
-    other.mkdir()
-    run("update", "--vault", str(other))
+    shutil.copytree(vault, other)
+    result = run("update", "--vault", str(other))
+    assert "Comprobando acceso" in result.output
     assert config.load().source.vault_path == str(other)
+
+
+def test_update_rejects_vault_without_agents_or_skills(cfg, tmp_path):
+    empty = tmp_path / "vacio"
+    empty.mkdir()
+    result = runner.invoke(app, ["update", "--vault", str(empty)])
+    assert result.exit_code == 1
+    assert "ninguna de las carpetas" in result.output
+    assert config.load().source.vault_path == cfg.source.vault_path  # no se guardó
+
+
+def test_init_rejects_unreadable_vault(home, tmp_path):
+    result = runner.invoke(app, ["init", "--vault", str(tmp_path / "no-existe"), "--targets", "claude"])
+    assert result.exit_code == 1
+    assert "no existe" in result.output
+    assert not config.exists()
+
+
+def test_init_warns_about_empty_folders(home, tmp_path):
+    vault = tmp_path / "drive"
+    (vault / "AI-Config/agents").mkdir(parents=True)
+    (vault / "AI-Config/skills/sin-skill-md").mkdir(parents=True)
+    result = run("init", "--vault", str(vault), "--targets", "claude", "--no-sync")
+    assert "está vacía" in result.output and "Disponible sin conexión" in result.output
+    assert "sin SKILL.md" in result.output
+    assert "ningún agent ni skill" in result.output
+
+
+def test_doctor_reports_readable_vault_and_writable_targets(cfg):
+    result = run("doctor")
+    assert "2 agents y 1 skills encontrados y legibles" in result.output
+    assert "claude: se puede escribir" in result.output
 
 
 def test_unknown_target_rejected(cfg):
