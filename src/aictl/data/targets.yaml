@@ -9,7 +9,7 @@
 #             Si termina en "/" se copia la carpeta completa de la skill.
 # transform:  lista de transformaciones (se aplican a los .md, en orden):
 #             strip_wikilinks, strip_frontmatter, opencode_frontmatter,
-#             kiro_steering, to_kiro_json, to_mdc, concat
+#             kiro_steering, to_kiro_json, to_codex_toml, to_mdc, concat
 #             (concat agrupa todos los items en un único archivo).
 #
 # Siempre se eliminan del frontmatter las claves internas de aictl
@@ -31,8 +31,8 @@ targets:
   codex:
     root: ~/.codex
     rules:
-      - { kind: agent, dest: "AGENTS.md",        transform: [strip_wikilinks, concat] }
-      - { kind: skill, dest: "skills/{name}/",   transform: [strip_wikilinks] }
+      - { kind: agent, dest: "agents/{name}.toml", transform: [strip_wikilinks, to_codex_toml] }
+      - { kind: skill, dest: "skills/{name}/",     transform: [strip_wikilinks] }
 
   antigravity:
     root: ~/.gemini

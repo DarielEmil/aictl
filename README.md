@@ -90,13 +90,13 @@ Para personalizarlo: `aictl mapping --export` → edita `~/.config/aictl/targets
 |---|---|---|
 | claude | `~/.claude/agents/{name}.md` | `~/.claude/skills/{name}/` |
 | opencode | `~/.config/opencode/agents/{name}.md` | `~/.config/opencode/skills/{name}/` |
-| codex | `~/.codex/AGENTS.md` (concatenado) | `~/.codex/skills/{name}/` |
+| codex | `~/.codex/agents/{name}.toml` | `~/.codex/skills/{name}/` |
 | antigravity | `~/.gemini/config/agents/{name}/agent.md` | `~/.gemini/config/skills/{name}/` |
 | kiro | `~/.kiro/agents/{name}.json` | `~/.kiro/skills/{name}/` |
 | cursor | `~/.cursor/agents/{name}.md` | `~/.cursor/skills/{name}/` |
 
 Transforms disponibles: `strip_wikilinks`, `strip_frontmatter`, `opencode_frontmatter`,
-`kiro_steering` (para usar `~/.kiro/steering/`), `to_kiro_json`, `to_mdc`, `concat`.
+`kiro_steering` (para usar `~/.kiro/steering/`), `to_kiro_json`, `to_codex_toml`, `to_mdc`, `concat`.
 
 > Las rutas globales de cada herramienta cambian con sus versiones; si alguna no coincide con
 > la tuya, ajústala en tu `targets.yaml`.
@@ -118,7 +118,7 @@ Si hay errores, `init`/`update` piden confirmación antes de guardar (sin termin
 aictl guarda en `~/.config/aictl/manifest.json` cada archivo que escribe con su hash. En `sync`:
 
 - Solo sobrescribe archivos que **él creó** y que **no se han editado a mano**.
-- Un archivo existente no gestionado (p. ej. tu `~/.codex/AGENTS.md`) o editado a mano se marca
+- Un archivo existente no gestionado (p. ej. tu `~/.codex/agents/reviewer.toml`) o editado a mano se marca
   como **conflicto** y no se toca. `--force` lo sobrescribe.
 - Si borras un agent/skill del vault, se elimina su copia gestionada (las carpetas vacías también).
 - `aictl update --remove X --clean` borra solo los archivos gestionados de esa AI.

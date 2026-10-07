@@ -1,6 +1,7 @@
 import json
 
 import pytest
+import tomllib
 
 from aictl import mapping, transforms
 from aictl.frontmatter import parse
@@ -69,6 +70,18 @@ def test_kiro_json():
     item = Item("agent", "a", None, parse(text)[0], text)
     data = json.loads(transforms.to_kiro_json(text, item, "kiro"))
     assert data == {"name": "a", "description": "d", "prompt": "Prompt"}
+
+
+def test_codex_toml():
+    text = "---\ndescription: 'd \"q\"'\ncodex:\n  model: gpt-5\n---\nLínea 1\nLínea 2\n"
+    item = Item("agent", "a", None, parse(text)[0], text)
+    data = tomllib.loads(transforms.to_codex_toml(text, item, "codex"))
+    assert data == {
+        "name": "a",
+        "description": 'd "q"',
+        "developer_instructions": "Línea 1\nLínea 2\n",
+        "model": "gpt-5",
+    }
 
 
 def test_default_mapping_is_valid():

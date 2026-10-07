@@ -1,6 +1,7 @@
 import json
 import shutil
 
+import tomllib
 from typer.testing import CliRunner
 
 from aictl import config, manifest
@@ -31,8 +32,10 @@ def test_sync_writes_all_targets(cfg, home):
     assert "mode: subagent" in opencode and "model: anthropic/claude-sonnet-4-5" in opencode
     assert not (home / ".config/opencode/agents/claude-only.md").exists()
 
-    agents_md = (home / ".codex/AGENTS.md").read_text()
-    assert "## code-reviewer" in agents_md and "claude-only" not in agents_md
+    codex = tomllib.loads((home / ".codex/agents/code-reviewer.toml").read_text())
+    assert codex["name"] == "code-reviewer"
+    assert "estilo" in codex["developer_instructions"]
+    assert not (home / ".codex/agents/claude-only.toml").exists()
     assert (home / ".codex/skills/pdf-tools/SKILL.md").is_file()
     assert (home / ".gemini/config/agents/code-reviewer/agent.md").is_file()
     assert (home / ".gemini/config/skills/pdf-tools/SKILL.md").is_file()
@@ -60,7 +63,7 @@ def test_second_sync_is_idempotent(cfg, home):
 
 
 def test_unmanaged_file_is_a_conflict(cfg, home):
-    existing = home / ".codex/AGENTS.md"
+    existing = home / ".codex/agents/code-reviewer.toml"
     existing.parent.mkdir(parents=True)
     existing.write_text("mis instrucciones\n")
 

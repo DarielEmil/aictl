@@ -81,6 +81,49 @@ def to_kiro_json(text: str, item: Item, target: str) -> str:
     return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
 
 
+def _toml_value(value) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, (list, tuple)):
+        return "[" + ", ".join(_toml_value(v) for v in value) + "]"
+    text = str(value)
+    if "\n" in text and "'''" not in text:
+        return "'''\n" + text + "'''" if text.endswith("\n") else "'''\n" + text + "\n'''"
+    return json.dumps(text, ensure_ascii=False) 
+
+
+def _toml_key(key: str) -> str:
+    return key if re.fullmatch(r"[A-Za-z0-9_-]+", key) else json.dumps(key, ensure_ascii=False)
+
+
+def _toml_table(data: dict, prefix: str = "") -> list[str]:
+    lines = [f"{_toml_key(k)} = {_toml_value(v)}" for k, v in data.items()
+             if v is not None and not isinstance(v, dict)]
+    for k, v in data.items():
+        if isinstance(v, dict):
+            name = f"{prefix}{_toml_key(k)}"
+            lines += ["", f"[{name}]", *_toml_table(v, f"{name}.")]
+    return lines
+
+
+def to_codex_toml(text: str, item: Item, target: str) -> str:
+    """Agent personalizado de Codex (TOML): el cuerpo del .md va en `developer_instructions`.
+
+    `model` y `tools` de Claude no son compatibles, así que solo se incluyen campos
+    de Codex (model, model_reasoning_effort, sandbox_mode...) vía el override `codex:`.
+    """
+    meta, body = parse(text)
+    data = {
+        "name": item.name,
+        "description": meta.get("description", item.meta.get("description", "")),
+        "developer_instructions": body.strip() + "\n",
+    }
+    data.update(_overrides(item, "codex"))
+    return "\n".join(_toml_table(data)) + "\n"
+
+
 def to_mdc(text: str, item: Item, target: str) -> str:
     """Regla de Cursor (.mdc): description, globs y alwaysApply."""
     meta, body = parse(text)
@@ -100,6 +143,7 @@ TRANSFORMS: dict[str, Transform] = {
     "opencode_frontmatter": opencode_frontmatter,
     "kiro_steering": kiro_steering,
     "to_kiro_json": to_kiro_json,
+    "to_codex_toml": to_codex_toml,
     "to_mdc": to_mdc,
 }
 
