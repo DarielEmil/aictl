@@ -91,7 +91,7 @@ Para personalizarlo: `aictl mapping --export` → edita `~/.config/aictl/targets
 | claude | `~/.claude/agents/{name}.md` | `~/.claude/skills/{name}/` |
 | opencode | `~/.config/opencode/agents/{name}.md` | `~/.config/opencode/skills/{name}/` |
 | codex | `~/.codex/AGENTS.md` (concatenado) | `~/.codex/skills/{name}/` |
-| antigravity | `~/.gemini/GEMINI.md` (concatenado) | `~/.gemini/antigravity/skills/{name}/` |
+| antigravity | `~/.gemini/config/agents/{name}/agent.md` | `~/.gemini/config/skills/{name}/` |
 | kiro | `~/.kiro/agents/{name}.json` | `~/.kiro/skills/{name}/` |
 | cursor | `~/.cursor/agents/{name}.md` | `~/.cursor/skills/{name}/` |
 

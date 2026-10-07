@@ -34,7 +34,8 @@ def test_sync_writes_all_targets(cfg, home):
     agents_md = (home / ".codex/AGENTS.md").read_text()
     assert "## code-reviewer" in agents_md and "claude-only" not in agents_md
     assert (home / ".codex/skills/pdf-tools/SKILL.md").is_file()
-    assert (home / ".gemini/GEMINI.md").is_file()
+    assert (home / ".gemini/config/agents/code-reviewer/agent.md").is_file()
+    assert (home / ".gemini/config/skills/pdf-tools/SKILL.md").is_file()
 
     kiro = json.loads((home / ".kiro/agents/code-reviewer.json").read_text())
     assert kiro["name"] == "code-reviewer"

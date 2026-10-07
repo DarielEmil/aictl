@@ -37,8 +37,8 @@ targets:
   antigravity:
     root: ~/.gemini
     rules:
-      - { kind: agent, dest: "GEMINI.md",                  transform: [strip_wikilinks, concat] }
-      - { kind: skill, dest: "antigravity/skills/{name}/", transform: [strip_wikilinks] }
+      - { kind: agent, dest: "config/agents/{name}/agent.md", transform: [strip_wikilinks] }
+      - { kind: skill, dest: "config/skills/{name}/",         transform: [strip_wikilinks] }
 
   kiro:
     root: ~/.kiro
