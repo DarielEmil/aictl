@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "aictl"
 version = "0.1.0"
-description = "Sincroniza agents y skills desde Obsidian hacia Claude, OpenCode, Codex, Antigravity, Kiro y Cursor"
+description = "Sync agents and skills from Obsidian to Claude, OpenCode, Codex, Antigravity, Kiro, and Cursor"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
